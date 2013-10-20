@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import es.ceura.web.sesion.models.User;
+import es.ceura.web.sesion.validation.InvalidUserException;
 import es.ceura.web.sesion.validation.Validator;
 
 @WebServlet("/check-user")
@@ -28,23 +29,38 @@ public class LogIn extends HttpServlet {
 
 	protected void doPost(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
-		PrintWriter writer = response.getWriter();
+		User user = createUserFrom(request);
 
-		final String userName = request.getParameter("nombre");
-		final String password = request.getParameter("password");
-		User user = new User(userName, password);
-
-		Validator validator = new Validator();
-		if (validator.validateUser(user)) {
-			HttpSession session = request.getSession();
-			session.setAttribute("user", user);
-
-			response.setContentType("text/html");
-			writer.write("<html><head></head><body><h1>Welcome, "
-					+ user.getName() + "</h1><a href=\"./contador\">Continuar!</a></body></html>");
-		}else{
-			response.sendRedirect("./index.html");
+		try {
+			validate(user);
+			prepareSession(request, user);
+			writeResponse(response, user);
+			
+		} catch (InvalidUserException e) {
+			response.sendRedirect("error.html");
 		}
 	}
 
+	private void validate(User user) throws InvalidUserException {
+		new Validator().validate(user);
+	}
+
+	private User createUserFrom(HttpServletRequest request) {
+		final String userName = request.getParameter("nombre");
+		final String password = request.getParameter("password");
+		return new User(userName, password);
+	}
+
+	private void prepareSession(HttpServletRequest request, User user) {
+		HttpSession session = request.getSession();
+		session.setAttribute("user", user);
+	}
+
+	private void writeResponse(HttpServletResponse response, User user) throws IOException {
+		PrintWriter writer = response.getWriter();
+		response.setContentType("text/html");
+		writer.write("<html><head><title>Welcome!</title></head><body>");
+		writer.write("<h1>Welcome, " + user.getName() + "</h1>");
+		writer.write("<a href=\"./contador\">Continuar!</a></body></html>");
+	}
 }

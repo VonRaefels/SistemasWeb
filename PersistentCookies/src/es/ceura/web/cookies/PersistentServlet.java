@@ -7,7 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
+import java.io.PrintWriter;
 import java.util.Properties;
 
 import javax.servlet.ServletException;
@@ -22,58 +22,107 @@ public class PersistentServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
 	private Properties sessionData;
+	private static final String sessionFileName = "session.properties";
 
 	public PersistentServlet() {
 		super();
+
+	}
+
+	@Override
+	public void init() throws ServletException {
 		sessionData = new Properties();
-		InputStream inputStream = null;
 		try {
-			inputStream = new FileInputStream(
-					"/home/jorge-mint/Documents/Java2EE/Cookies/PersistentCookies/session.properties");
-		} catch (FileNotFoundException e1) {
-			e1.printStackTrace();
-		}
-		try {
-			if (inputStream != null) {
-				sessionData.load(inputStream);
-			}
+			tryCreateSessionFile();
+			loadPropertiesFile();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
+	private void tryCreateSessionFile() throws IOException {
+		if (!sessionFileExists()) {
+			getSessionFile().createNewFile();
+		}
+	}
+
+	private boolean sessionFileExists() {
+		return getSessionFile().exists();
+	}
+
+	private File getSessionFile() {
+		return new File(Utils.getSystemHomeFolder(), sessionFileName);
+	}
+
+	private void loadPropertiesFile() throws IOException {
+		InputStream inputStream = null;
+		try {
+			inputStream = new FileInputStream(getSessionFile());
+			sessionData.load(inputStream);
+		} catch (FileNotFoundException ignore) {
+		} finally {
+			if (inputStream != null) {
+				inputStream.close();
+			}
+		}
+	}
+
 	protected void doGet(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
-		String clientIP = request.getRemoteAddr();
+		final String clientIP = request.getRemoteAddr();
 		Cookie cookie = CookieUtilities.getCookie(request, "sessionCount");
+
+		int sessionCount = getSessionCount(cookie, clientIP);
+		sessionCount++;
+
+		saveSessionData(clientIP, sessionCount);
+
+		sendResponse(sessionCount, response);
+	}
+
+	private int getSessionCount(Cookie cookie, String clientIP) {
 		int sessionCount;
-		if (cookie == null) {
+		if (isNull(cookie)) {
 			sessionCount = Integer.parseInt(sessionData.getProperty(clientIP,
 					"0"));
 		} else {
 			sessionCount = Integer.parseInt(cookie.getValue());
 		}
-		sessionCount++;
+		return sessionCount;
+	}
+
+	private boolean isNull(Cookie cookie) {
+		return cookie == null;
+	}
+
+	private void saveSessionData(String clientIP, int sessionCount) {
 		sessionData.setProperty(clientIP, String.valueOf(sessionCount));
 		saveProperties();
+	}
+
+	private void sendResponse(int sessionCount, HttpServletResponse response) {
+		prepareResponse(response, sessionCount);
+		PrintWriter writer = null;
+		try {
+			writer = response.getWriter();
+			writer.write("<html><head><title>PersitentCookies</title></head><body>");
+			writer.write("<h1>Session Count: " + sessionCount + "</h1>");
+			writer.write("</body></html>");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void prepareResponse(HttpServletResponse response, int sessionCount) {
 		response.addCookie(new Cookie("sessionCount", String
 				.valueOf(sessionCount)));
 		response.setContentType("text/html");
-		response.getWriter().write("<h1>" + sessionCount + "</h1>");
-		try {
-			Thread.sleep(3000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 	private synchronized void saveProperties() {
 		OutputStream out = null;
 		try {
-			out = new FileOutputStream(
-					new File(
-							"/home/jorge-mint/Documents/Java2EE/Cookies/PersistentCookies/session.properties"));
+			out = new FileOutputStream(getSessionFile());
 			sessionData.store(out, "");
 		} catch (IOException ex) {
 			ex.printStackTrace();

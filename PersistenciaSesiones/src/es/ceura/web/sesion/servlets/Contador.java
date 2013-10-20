@@ -16,7 +16,6 @@ import es.ceura.web.sesion.models.User;
 public class Contador extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
-
 	@Override
 	public void init() throws ServletException {
 		super.init();
@@ -26,39 +25,47 @@ public class Contador extends HttpServlet {
 			HttpServletResponse response) throws ServletException, IOException {
 		HttpSession session = request.getSession();
 
-		User user = getUserOrRedirect(session, response);
-		int contador = getContadorSession(session);
-		writeResponse(user, contador, response);
+		try {
+			User user = getUserOrRedirect(session, response);
+			int contador = getContadorSession(session);
+			writeResponse(user, contador, response);
+		} catch (NoSessionException e) {
+			response.sendRedirect("index.html");
+		}
 	}
 
-	private User getUserOrRedirect(HttpSession session, HttpServletResponse response) throws IOException{
+	private User getUserOrRedirect(HttpSession session,
+			HttpServletResponse response) throws IOException, NoSessionException {
 		User user = (User) session.getAttribute("user");
 		if (user == null) {
-			response.sendRedirect("./index.html");
+			throw new NoSessionException("User session was not found on request");
 		}
 		return user;
 	}
 
-	private void writeResponse(User user, int contador,
-			HttpServletResponse response) throws IOException {
-			response.setContentType("text/html");
-			PrintWriter writer = response.getWriter();
-			writer.write("<html><head></head><body>");
-			writer.write(
-					"<h1>" + user.getName() + ", has visto esta pagina: "
-							+ contador + " veces!</h1>");
-			writer.write("<a href=\"./logout\">logout</a>");
-			writer.write("</body></html>");
-	}
-
 	private int getContadorSession(HttpSession session) {
 		Integer contador = (Integer) session.getAttribute("contador");
-		if (contador == null) {
+		if (isNull(contador)) {
 			contador = 0;
 		}
 		contador++;
 		session.setAttribute("contador", contador);
 		return (int) contador;
+	}
+	
+	private boolean isNull(Integer contador){
+		return contador == null;
+	}
+
+	private void writeResponse(User user, int contador,
+			HttpServletResponse response) throws IOException {
+		response.setContentType("text/html");
+		PrintWriter writer = response.getWriter();
+		writer.write("<html><head></head><body>");
+		writer.write("<h1>" + user.getName() + ", has visto esta pagina: "
+				+ contador + " veces!</h1>");
+		writer.write("<a href=\"./logout\">logout</a>");
+		writer.write("</body></html>");
 	}
 
 	protected void doPost(HttpServletRequest request,

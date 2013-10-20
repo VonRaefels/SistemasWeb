@@ -1,5 +1,2 @@
 -> Registrar usuarios.
--> Plantillas?
--> Html más bonito.
 -> Mostrar mensaje de error cuando introduces mal el usuario.
--> Refactor codigo limpio.
