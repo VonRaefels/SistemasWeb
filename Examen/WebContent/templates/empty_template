@@ -1,0 +1,5 @@
+<div class="pregunta" id="{{idPregunta}}">
+	<h2>{{pregunta}}, {{puntuacion}}</h2>
+	{{respuestas}}
+</div>
+

@@ -1,0 +1,31 @@
+start_question
+1
+¿Cuantas patas tiene una araña.
+1.0
+2
+No tiene patas.
+Tiene 8 patas.
+Tiene 4 patas.
+Ninguna de las anteriores.
+end_question
+start_question
+2
+¿De que color es el caballo blanco de Santiago?
+0.5
+1
+Blanco
+Es negro.
+Es transparente.
+Ninguna de las anteriores.
+end_question
+start_question
+3
+¿Cuantos programadores hacen falta para cambiar una bombilla?
+2.0
+4
+16 programadores, es una tarea difícil.
+Solo uno.
+Un equipo scrum.
+Ninguno, es tema de hardware.
+end_question
+
