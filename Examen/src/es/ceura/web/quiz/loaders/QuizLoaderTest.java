@@ -10,7 +10,7 @@ import es.ceura.web.quiz.models.Quiz;
 public class QuizLoaderTest {
 
 	public static void main(String[] args) {
-		String path = "/home/jorge-mint/quiz.txt";
+		String path = "/home/jorge/quiz.txt";
 		try {
 			Quiz quiz = QuizLoader.loadQuiz(path);
 			for(Question question : quiz){

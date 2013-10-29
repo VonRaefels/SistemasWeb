@@ -1,1 +1,1 @@
-<input disabled="disabled" type="radio" name="{{idPregunta}}" value="{{idPregunta}}|{{idRespuesta}}">{{respuesta}}</br>
+<input disabled="disabled" type="radio" name="{{idPregunta}}" value="{{idPregunta}}:{{idRespuesta}}">{{respuesta}}</br>

@@ -2,15 +2,13 @@ package es.ceura.web.quiz.servlets;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.ArrayList;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import es.ceura.web.quiz.loaders.QuizLoader;
 import es.ceura.web.quiz.loaders.TemplateLoader;
@@ -23,7 +21,7 @@ import es.ceura.web.quiz.utils.CookieUtilities;
 public class ViewQuiz extends HttpServlet {
 
 	private static final long serialVersionUID = -7642337079926751380L;
-	private Quiz quiz;
+	private static Quiz quiz;
 
 	public ViewQuiz() {
 		super();
@@ -43,80 +41,113 @@ public class ViewQuiz extends HttpServlet {
 	}
 
 	@Override
-	protected void doGet(HttpServletRequest request,
-			HttpServletResponse response) throws ServletException, IOException {
-		PrintWriter writer = response.getWriter();
-		String preguntaTemplate = TemplateLoader.loadEmptyTemplate(this);
-		String respuestaTemplate = TemplateLoader.loadEmptyAnswerTemplate(this);
-		String color = "white";
-		request.getSession().setAttribute("examen", quiz);
-		if (!isNewQuiz(request)) {
-			preguntaTemplate = TemplateLoader.loadCorrectedTemplate(this);
-			respuestaTemplate = TemplateLoader.loadCorrectedAnswerTemplate(this);
-			color = "red";
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		final ArrayList<Integer> correctQuestions = parseQuestionsCookie(request);
+		final boolean isNewQuiz = CookieUtilities.getCookie(request, "correct-questions") == null;
+		StringBuilder htmlBuilder = new StringBuilder();
+		htmlBuilder = prepareHtmlHeader(htmlBuilder, isNewQuiz);
+		htmlBuilder = prepareHtmlBody(htmlBuilder, isNewQuiz, correctQuestions);
+		htmlBuilder = prepareHtmlFooter(htmlBuilder, isNewQuiz);
+		response = prepareResponse(response);
+		writeResponse(response, htmlBuilder.toString());
+	}
+
+	private ArrayList<Integer> parseQuestionsCookie(HttpServletRequest request) {
+		ArrayList<Integer> correctQuestions = new ArrayList<>();
+		String correctQuestionsString = CookieUtilities.getCookieValue(request, "correct-questions", "");
+		String[] questions = "".equals(correctQuestionsString) ? new String[0]: correctQuestionsString.split(",");
+		for (String question : questions) {
+			correctQuestions.add(Integer.parseInt(question));
 		}
-		Integer lastIntento = getLastIntentoValue(request);
-		lastIntento = lastIntento + 1;
-		response.addCookie(new Cookie("intento", Integer.toString(lastIntento)));
+		return correctQuestions;
+	}
+
+	private HttpServletResponse prepareResponse(HttpServletResponse response) {
+		response.setContentType("text/html");
+		return response;
+	}
+
+	private StringBuilder prepareHtmlHeader(StringBuilder html, boolean isNewQuiz) throws IOException {
+		html.append("<html><head><title>Quiz!</title></head><body>");
+		html.append("<h1>Quiz!</h1>");
+		if (isNewQuiz) {
+			html.append("<form action=\"validar\" method=\"POST\">");
+		}
+		return html;
+	}
+
+	private StringBuilder prepareHtmlBody(StringBuilder html, boolean isNewQuiz, ArrayList<Integer> correctQuestions)
+			throws IOException {
+		String preguntaTemplate = isNewQuiz ? TemplateLoader.loadEmptyTemplate(this) : TemplateLoader
+				.loadCorrectedTemplate(this);
+		String respuestaTemplate = isNewQuiz ? TemplateLoader.loadEmptyAnswerTemplate(this) : TemplateLoader
+				.loadCorrectedAnswerTemplate(this);
+		String htmlBody = createQuestionsHtml(preguntaTemplate, respuestaTemplate, correctQuestions, isNewQuiz);
+		html.append(htmlBody);
+		return html;
+	}
+
+	private String createQuestionsHtml(String preguntaTemplate, String respuestaTemplate,
+			ArrayList<Integer> correctQuestions, boolean isNewQuiz) {
 		StringBuilder examenBuilder = new StringBuilder();
 		for (Question pregunta : quiz) {
-			if(request.getSession().getAttribute(Integer.toString(pregunta.getId()))!= null){
-				color = "green";
-			}else{
-				color = "red";
-			}
-			String preguntaHtml = preguntaTemplate.replaceAll(
-					"\\{\\{pregunta\\}\\}", pregunta.getEnunciado());
-			preguntaHtml = preguntaHtml.replaceAll("\\{\\{idPregunta\\}\\}",
-					Integer.toString(pregunta.getId()));
-			preguntaHtml = preguntaHtml.replaceAll("\\{\\{color\\}\\}",
-					color);
-			preguntaHtml = preguntaHtml.replaceAll("\\{\\{puntuacion\\}\\}",
-					Double.toString(pregunta.getPuntuacion()));
-			int contador = 0;
-			StringBuilder respuestasBuilder = new StringBuilder();
-			for (Answer respuesta : pregunta) {
-				String respuestaHtml = respuestaTemplate.replaceAll(
-						"\\{\\{respuesta\\}\\}", respuesta.getText());
-				respuestaHtml = respuestaHtml.replaceAll(
-						"\\{\\{idRespuesta\\}\\}", Integer.toString(contador));
-				respuestaHtml = respuestaHtml.replaceAll(
-						"\\{\\{idPregunta\\}\\}",
-						Integer.toString(pregunta.getId()));
-				respuestasBuilder.append(respuestaHtml);
-				contador++;
-			}
-			preguntaHtml = preguntaHtml.replaceAll("\\{\\{respuestas\\}\\}",
-					respuestasBuilder.toString());
+			String preguntaHtml = parsePreguntaTemplate(preguntaTemplate, pregunta, correctQuestions, isNewQuiz);
+			String respuestasHtml = parseRespuestasTemplate(respuestaTemplate, pregunta);
+			preguntaHtml = preguntaHtml.replaceAll("\\{\\{respuestas\\}\\}", respuestasHtml);
 			examenBuilder.append(preguntaHtml);
 		}
-		request.getSession().setAttribute("validated", false);
-		response.setContentType("text/html");
-		writer.write("<html><head><title>Quiz!</title></head><body>");
-		writer.write("<h1>Quiz!</h1>");
-		writer.write("<form action=\"validar\" method=\"POST\">");
-		writer.write(examenBuilder.toString());
-		writer.write("</br>");
-		if(!isNewQuiz(request)){
-			writer.write("<a href=\"ver-intentos\">Ver intentos!</a>");
-		}else{
-			writer.write("<input type=\"submit\" value=\"submit\">");
-		}
-		writer.write("</form>");
-		writer.write("<a href=\"ver-intentos\">Ver intentos!</a>");
-		writer.write("</body></html>");
+		return examenBuilder.toString();
 	}
 
-	private boolean isNewQuiz(HttpServletRequest req) {
-		return req.getSession().getAttribute("validated") == null;
+	private String parsePreguntaTemplate(String preguntaTemplate, Question pregunta,
+			ArrayList<Integer> correctQuestions, boolean isNewQuiz) {
+		String color = "white";
+		if (!isNewQuiz) {
+			color = "red";
+			if (correctQuestions.contains(pregunta.getId())) {
+				color = "green";
+			}
+		}
+		String preguntaHtml = preguntaTemplate.replaceAll("\\{\\{pregunta\\}\\}", pregunta.getEnunciado());
+		preguntaHtml = preguntaHtml.replaceAll("\\{\\{idPregunta\\}\\}", Integer.toString(pregunta.getId()));
+		preguntaHtml = preguntaHtml.replaceAll("\\{\\{puntuacion\\}\\}", Double.toString(pregunta.getPuntuacion()));
+		preguntaHtml = preguntaHtml.replaceAll("\\{\\{color\\}\\}", color);
+		return preguntaHtml;
 	}
 
-	private Integer getLastIntentoValue(HttpServletRequest request) {
-
-		Integer lastIntento = Integer.parseInt(CookieUtilities.getCookieValue(request, "intentos", "0"));
-		if (lastIntento == null) {
-			lastIntento = 0;
+	private String parseRespuestasTemplate(String respuestaTemplate, Question pregunta) {
+		int contador = 0;
+		StringBuilder respuestasBuilder = new StringBuilder();
+		for (Answer respuesta : pregunta) {
+			String respuestaHtml = respuestaTemplate.replaceAll("\\{\\{respuesta\\}\\}", respuesta.getText());
+			respuestaHtml = respuestaHtml.replaceAll("\\{\\{idRespuesta\\}\\}", Integer.toString(contador));
+			respuestaHtml = respuestaHtml.replaceAll("\\{\\{idPregunta\\}\\}", Integer.toString(pregunta.getId()));
+			respuestasBuilder.append(respuestaHtml);
+			contador++;
 		}
-		return lastIntento;
+		return respuestasBuilder.toString();
+	}
+
+	private StringBuilder prepareHtmlFooter(StringBuilder htmlBuilder, boolean isNewQuiz) {
+		htmlBuilder.append("</br>");
+		if (isNewQuiz) {
+			htmlBuilder.append("<input type=\"submit\" value=\"submit\">");
+			htmlBuilder.append("</form>");
+		} else {
+			// invalidateCookie();
+			htmlBuilder.append("<a href=\"repetir-test\">Repetir Test!</a>");
+			htmlBuilder.append("</br></br>");
+		}
+		htmlBuilder.append("<a href=\"ver-intentos\">Ver intentos!</a>");
+		htmlBuilder.append("</body></html>");
+		return htmlBuilder;
+	}
+
+	private void writeResponse(HttpServletResponse response, String html) throws IOException {
+		response.getWriter().write(html);
+	}
+
+	public static Quiz getCurrentQuiz() {
+		return quiz;
 	}
 }

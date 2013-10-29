@@ -1,0 +1,20 @@
+Para implementar el modelo de negocio se han realizado las siguientes clases:
+-> Quiz: Clase que representa el exámen, contiene un mapa<Integer, Question> para almacenar las preguntas
+    que pertenecen a dicho test.
+-> Question: Representa la pregunta, contiene los siguientes parámetros de clase:
+    -> Id
+    -> Enunciado
+    -> Puntuacion
+    -> Answers
+    Las respuestas en este caso se han modelizado como una lista ya que no tienen una
+    referencia de id como en el caso de las preguntas.
+-> Answer: Clase que modeliza la respuesta, tan solo contiene el texto de la respuesta.
+
+Notas del modelado: Para modelar la jerarquía de preguntas en el examen se ha usado un HashMap
+    ya que de esa forma cuando posteriormente recogamos los datos del usuario podremos acceder más
+    facilmente a la pregunta a través de la clave sin tener que iterar la lista entera.
+
+QuizLoader: Esta clase recibe una cadena de text (path) y prepara un Quiz leyendo del fichero
+    de dicha ruta los datos necesarios. La clase tiene un sólo un método estático, ya que se trata de
+    una utilidad que maneja los métodos de negocio, aun así la clase está preparada para ser "thread safe",
+    ya que no hay parámetros de la clase.
