@@ -9,7 +9,9 @@ import java.io.IOException;
 import es.ceura.web.quiz.models.Answer;
 import es.ceura.web.quiz.models.Question;
 import es.ceura.web.quiz.models.Quiz;
-
+    /*
+     * Jorge Madrid Portillo
+     */
 public class QuizLoader {
 
 	public static Quiz loadQuiz(String path) throws FileNotFoundException,
