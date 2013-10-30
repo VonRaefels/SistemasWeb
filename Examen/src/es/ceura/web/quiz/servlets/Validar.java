@@ -26,7 +26,8 @@ import es.ceura.web.quiz.models.user.UserResult;
 
 @WebServlet("/validar")
 public class Validar extends HttpServlet {
-	private static final long serialVersionUID = 1L;
+
+	private static final long serialVersionUID = -4472361431625796788L;
 
 	public Validar() {
 		super();
