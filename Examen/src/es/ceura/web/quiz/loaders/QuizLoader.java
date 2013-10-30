@@ -10,7 +10,7 @@ import es.ceura.web.quiz.models.Answer;
 import es.ceura.web.quiz.models.Question;
 import es.ceura.web.quiz.models.Quiz;
     /*
-     * Jorge Madrid Portillo
+     * Jorge Madrid Portillo (66785403)
      */
 public class QuizLoader {
 

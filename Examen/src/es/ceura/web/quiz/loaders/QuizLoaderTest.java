@@ -13,7 +13,7 @@ public class QuizLoaderTest {
 		String path = "/home/jorge/quiz.txt";
 		try {
 			Quiz quiz = QuizLoader.loadQuiz(path);
-			for(Question question : quiz){
+			for(Question question :  quiz){
 				System.out.println("Id: " + question.getId());
 				System.out.println("Enunciado: " + question.getEnunciado());
 				System.out.println("Puntuación: " + question.getPuntuacion());
